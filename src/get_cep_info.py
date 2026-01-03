@@ -34,11 +34,3 @@ def consultar_cep(cep):
         resultado['mensagem'] = f"Erro de conexão: {str(e)}"
 
     return resultado
-
-# # Área de Testes
-# if __name__ == "__main__":
-#     # Teste 1: Sucesso
-#     print(consultar_cep("01001000")) 
-    
-#     # Teste 2: CEP inexistente
-#     print(consultar_cep("99999999"))
