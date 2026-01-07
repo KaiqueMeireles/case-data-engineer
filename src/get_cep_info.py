@@ -4,7 +4,7 @@ from urllib3.util.retry import Retry
 import time
 from typing import Optional
 
-def criar_sessao() -> requests.Session:
+def _criar_sessao() -> requests.Session:
     """Cria uma sessão HTTP com política de Retry automática.
     
     Configura uma sessão reutilizável com estratégia de retry para lidar com
@@ -30,7 +30,7 @@ def criar_sessao() -> requests.Session:
     return session
 
 
-def validar_input_cep(cep_raw: str) -> Optional[str]:
+def _validar_input_cep(cep_raw: str) -> Optional[str]:
     """Higieniza e valida o formato do CEP.
 
     Remove caracteres de formatação (pontos e traços) e verifica se o
@@ -84,7 +84,7 @@ def consultar_cep(cep: str) -> dict:
     }
 
     # Valida o CEP antes de fazer a requisição.
-    cep_valido = validar_input_cep(cep)
+    cep_valido = _validar_input_cep(cep)
     
     if cep_valido is None:
         resultado['mensagem'] = (
@@ -123,4 +123,4 @@ def consultar_cep(cep: str) -> dict:
 
 # Instanciando a sessão fora da função para que todos os
 # workers usem essa mesma configuração.
-session = criar_sessao()
+session = _criar_sessao()

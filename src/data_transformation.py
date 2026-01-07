@@ -2,7 +2,7 @@ import pandas as pd
 import warnings
 
 
-def validar_ceps_duplicados(
+def _validar_ceps_duplicados(
     df: pd.DataFrame,
 ) -> pd.DataFrame:
     """Valida e remove CEPs duplicados com verificação de inconsistências.
@@ -80,7 +80,7 @@ def validar_dados_transformados(
     df_validado = df.copy()
 
     # Valida CEPs duplicados.
-    df_validado = validar_ceps_duplicados(df_validado)
+    df_validado = _validar_ceps_duplicados(df_validado)
 
     # Substitui '' e espaços em branco por NaN (valor nulo).
     df_validado = df_validado.replace(r'^\s*$', pd.NA, regex=True)
