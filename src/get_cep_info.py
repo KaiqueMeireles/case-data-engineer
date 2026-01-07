@@ -45,6 +45,8 @@ def consultar_cep(cep: str) -> dict:
             - 'dados': Dados do endereço (dict) ou None se erro
             - 'mensagem': Mensagem de erro ou string vazia se sucesso
     """
+    # Delay para respeitar rate limiting da API.
+    time.sleep(0.2)
     
     resultado = {
         "cep": cep,
