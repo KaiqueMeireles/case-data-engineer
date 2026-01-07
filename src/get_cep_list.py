@@ -3,7 +3,11 @@ import os
 import warnings
 
 # A escolha do 25 foi por causa da soma do ano de fundação do banco (1969, 1 + 9 + 6 + 9 = 25).
-def carregar_lista_cep(caminho_arquivo='data/input/cep.tsv.zip', tamanho_amostra=10000, semente=25):
+def carregar_lista_cep(
+    caminho_arquivo: str = 'data/input/cep.tsv.zip',
+    tamanho_amostra: int = 10000,
+    semente: int = 25
+) -> pd.DataFrame:
     """Carrega e retorna uma amostra aleatória de CEPs em um DataFrame.
 
     Args:
@@ -31,12 +35,20 @@ def carregar_lista_cep(caminho_arquivo='data/input/cep.tsv.zip', tamanho_amostra
         cep_df = pd.read_csv(caminho_arquivo, sep='\t', usecols=['cep'], dtype=str)
         
         if len(cep_df) < tamanho_amostra:
-            warnings.warn(f"Amostra solicitada ({tamanho_amostra}) maior que dados disponíveis ({len(cep_df)}), retornando todos os dados.", UserWarning)
+            warn_message = (
+                f"Amostra solicitada ({tamanho_amostra}) "
+                f"maior que dados disponíveis ({len(cep_df)}). "
+                "Retornando todos os dados."
+            )
+            warnings.warn(warn_message, UserWarning)
             return cep_df.reset_index(drop=True)
         
         # Limitando os resultados à amostra desejada (10.000 casos).
         # O random_state garante que a amostra seja a mesma em execuções diferentes.
-        return cep_df.sample(n=tamanho_amostra, random_state=semente).reset_index(drop=True)
+        return cep_df.sample(
+            n=tamanho_amostra,
+            random_state=semente
+        ).reset_index(drop=True)
     
     except Exception as e:
         raise RuntimeError(f"Erro ao carregar CEPs: {e}")

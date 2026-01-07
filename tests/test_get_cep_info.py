@@ -1,8 +1,9 @@
 import time
 import random
+from typing import Any
 
 
-def consultar_cep_mock(cep):
+def consultar_cep_mock(cep: str) -> dict[str, Any]:
     # Simula o tempo de rede (delay aleatório)
     time.sleep(random.uniform(0.2, 1.5))
     

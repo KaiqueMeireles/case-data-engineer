@@ -2,15 +2,14 @@ from concurrent.futures import ThreadPoolExecutor
 import pandas as pd
 from src.get_cep_list import carregar_lista_cep
 
-# Teste com mock por causa do bloqueio da API por excesso de requisições durante o desenvolvimento
+# Teste com mock em caso de bloqueio da API por excesso de requisições
 from tests.test_get_cep_info import consultar_cep_mock as consultar_cep
-# from src.get_cep_info import consultar_cep 
+# from src.get_cep_info import consultar_cep
 
 
-workers = 500 # Valor alto temporário por estar utilizando mock
+workers = 500  # Valor alto temporário por estar utilizando mock
 
 with ThreadPoolExecutor(max_workers=workers) as executor:
-   
     print("Carregando lista de CEPs...")
     lista_cep = carregar_lista_cep(tamanho_amostra=10000)
     
@@ -27,4 +26,4 @@ with ThreadPoolExecutor(max_workers=workers) as executor:
     # Salvando os resultados em arquivos CSV
     resultados_ok.to_csv('data/output/cep_sucesso.csv', index=False)
     resultados_erro.to_csv('data/output/cep_erro.csv', index=False)
-    print("Resultados salvos em 'data/output/cep_sucesso.csv' e 'data/output/cep_erro.csv'.")
+    print("Resultados salvos em 'data/output/'.")
