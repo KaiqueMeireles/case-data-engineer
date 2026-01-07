@@ -39,7 +39,7 @@ def configurar_logging() -> None:
     """Centraliza a configuração de log do sistema.
 
     Configura dois handlers:
-    - Console: exibe apenas WARNING e ERROR (para evitar poluição visual)
+    - Console: exibe apenas ERROR e CRITICAL (erros graves)
     - Arquivo: registra todos os eventos com detalhes em data/output/pipeline_diagnosis.log
     """
     logger = logging.getLogger()
@@ -70,9 +70,9 @@ def configurar_logging() -> None:
     arquivo_handler.setFormatter(formato_arquivo)
     logger.addHandler(arquivo_handler)
 
-    # Handler para o CONSOLE (apenas logs de nível WARNING+)
+    # Handler para o CONSOLE (apenas logs de nível ERROR e CRITICAL)
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.WARNING)
+    console_handler.setLevel(logging.ERROR)
     console_handler.setFormatter(formato_console)
     logger.addHandler(console_handler)
 
