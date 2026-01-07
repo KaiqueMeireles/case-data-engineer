@@ -1,3 +1,4 @@
+import os
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -12,6 +13,40 @@ from src.export_data import exportar_json, exportar_xml, preparar_csv_erros
 from src.get_cep_info import consultar_cep
 from src.get_cep_list import carregar_lista_cep
 from src.utils import garantir_diretorio
+
+
+def _validar_entrada(tamanho_amostra: int, caminho_arquivo: str) -> None:
+    """Valida os parâmetros de entrada do pipeline ETL.
+
+    Verifica se tamanho_amostra é válido e se o arquivo de entrada existe.
+
+    Args:
+        tamanho_amostra (int): Quantidade de CEPs a processar.
+        caminho_arquivo (str): Caminho do arquivo com lista de CEPs.
+
+    Raises:
+        ValueError: Se tamanho_amostra <= 0 ou > 1000000.
+        FileNotFoundError: Se arquivo não existe.
+    """
+    # Valida tamanho_amostra
+    if tamanho_amostra <= 0:
+        raise ValueError(
+            f"tamanho_amostra deve ser > 0, recebido: {tamanho_amostra}"
+        )
+
+    if tamanho_amostra > 1000000:
+        raise ValueError(
+            f"tamanho_amostra muito grande (máx: 1000000), "
+            f"recebido: {tamanho_amostra}"
+        )
+
+    # Valida arquivo de entrada
+    caminho_normalizado = str(Path(caminho_arquivo))
+    if not os.path.exists(caminho_normalizado):
+        raise FileNotFoundError(
+            f"Arquivo não encontrado: {caminho_normalizado}"
+        )
+
 
 def executar_pipeline(
     tamanho_amostra: int,
@@ -32,11 +67,10 @@ def executar_pipeline(
             Define workers automaticamente: 500 em modo local, 4 em produção.
             Padrão: False (usa API ViaCEP com 4 workers).
     """
-    # Define workers baseado no modo: 500 local, 4 produção
+    _validar_entrada(tamanho_amostra, caminho_arquivo)
+
     workers = 500 if is_local else 4
 
-    caminho_arquivo = str(Path(caminho_arquivo))
-    # 1. SETUP E INFRAESTRUTURA
     garantir_diretorio("data/output/")
 
     # O padrão é True para garantir que o banco seja recriado a cada execução
@@ -44,7 +78,6 @@ def executar_pipeline(
     # do módulo de banco de dados sejam testadas (criação e inserção).
     criar_banco(reset=True)
 
-    # 2. EXTRAÇÃO
     print(
         f"[ETL] Modo {'LOCAL' if is_local else 'API'}. "
         f"Carregando lista com {workers} worker(s)..."
@@ -57,36 +90,32 @@ def executar_pipeline(
 
     print(f"[ETL] Iniciando consultas para {len(ceps)} CEPs...")
 
-    # Seleciona função de consulta (API real ou mock)
+    # Seleciona função de consulta (API real ou mock).
     if is_local:
         from tests.test_get_cep_info import consultar_cep_mock
         consulta_fn = consultar_cep_mock
     else:
         consulta_fn = consultar_cep
 
-    # Execução Paralela (I/O Bound)
+    # Execução paralela das consultas
     with ThreadPoolExecutor(max_workers=workers) as executor:
         resultados_brutos = list(executor.map(consulta_fn, ceps))
     
     df_bruto = pd.DataFrame(resultados_brutos)
 
-    # 3. TRANSFORMAÇÃO
     print("[ETL] Filtrando e transformando dados...")
     df_sucesso = df_bruto[df_bruto['status'] == 'sucesso'].copy()
     df_erro = df_bruto[df_bruto['status'] == 'erro'].copy()
 
-    # Fluxo de Sucesso
     if not df_sucesso.empty:
         df_final = normalizar_resultados(df_sucesso)
         df_final = validar_dados_transformados(df_final)
 
-        # 4. CARGA (Load)
         print("[ETL] Salvando dados no banco e exportando arquivos...")
         inserir_dados(df_final)
         exportar_json(df_final)
         exportar_xml(df_final)
 
-    # Fluxo de Erro (Logs)
     if not df_erro.empty:
         print(f"[ETL] Gerando logs para {len(df_erro)} erro(s)...")
         df_erros_formatados = preparar_csv_erros(df_erro)
