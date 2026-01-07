@@ -2,6 +2,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import time
+from typing import Optional
 
 def criar_sessao() -> requests.Session:
     """Cria uma sessão HTTP com política de Retry automática.
@@ -29,6 +30,32 @@ def criar_sessao() -> requests.Session:
     return session
 
 
+def validar_input_cep(cep_raw: str) -> Optional[str]:
+    """Higieniza e valida o formato do CEP.
+
+    Remove caracteres de formatação (pontos e traços) e verifica se o
+    resultado consiste em exatamente 8 dígitos numéricos.
+
+    Args:
+        cep_raw (str): O CEP bruto conforme lido da fonte de dados.
+
+    Returns:
+        Optional[str]: O CEP limpo (apenas números) se for válido,
+        ou None se o formato estiver incorreto.
+    """
+    if not isinstance(cep_raw, str):
+        return None
+
+    # Removendo formatações comuns.
+    cep_limpo = cep_raw.replace("-", "").replace(".", "").strip()
+
+    # Verificando se tem 8 dígitos e se é numérico.
+    if len(cep_limpo) != 8 or not cep_limpo.isdigit():
+        return None
+    
+    return cep_limpo
+
+
 def consultar_cep(cep: str) -> dict:
     """Consulta informações de endereço para um CEP via API ViaCEP.
     
@@ -45,6 +72,7 @@ def consultar_cep(cep: str) -> dict:
             - 'dados': Dados do endereço (dict) ou None se erro
             - 'mensagem': Mensagem de erro ou string vazia se sucesso
     """
+    
     # Delay para respeitar rate limiting da API.
     time.sleep(0.2)
     
@@ -55,9 +83,19 @@ def consultar_cep(cep: str) -> dict:
         "mensagem": ""
     }
 
+    # Valida o CEP antes de fazer a requisição.
+    cep_valido = validar_input_cep(cep)
+    
+    if cep_valido is None:
+        resultado['mensagem'] = (
+            "Formato inválido: CEP deve conter exatamente "
+            "8 dígitos numéricos."
+        )
+        return resultado
+
     try:
         response = session.get(
-            f"https://viacep.com.br/ws/{cep}/json/",
+            f"https://viacep.com.br/ws/{cep_valido}/json/",
             timeout=15
         )
         
