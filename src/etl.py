@@ -13,6 +13,7 @@ from src.database import criar_banco, inserir_dados
 from src.export_data import (
     exportar_json,
     exportar_xml,
+    limpar_arquivo,
     preparar_csv_erros,
 )
 from src.get_cep_info import consultar_cep
@@ -77,14 +78,16 @@ def executar_pipeline(
     """
     _validar_entrada(tamanho_amostra, caminho_arquivo)
 
+    logger.info("=" * 50)
+    logger.info("Iniciando ETL...")
+    logger.info("=" * 50)
+
     workers = 500 if is_local else 3
 
     garantir_diretorio("data/output/")
-
-    # O padrão é True para garantir que o banco seja recriado a cada execução
-    # isso foi feito com o objetivo de garantir que todas as funcionalidades
-    # do módulo de banco de dados sejam testadas (criação e inserção).
-    criar_banco(reset=True)
+    
+    # Limpa arquivos de saída anteriores
+    limpar_arquivo("data/output/enderecos_erros.csv")
 
     modo = 'LOCAL' if is_local else 'API'
     logger.info(
@@ -106,27 +109,37 @@ def executar_pipeline(
         consulta_fn = consultar_cep
 
     # Execução paralela das consultas
+    logger.info(f"[1/5] Consultando {len(ceps)} CEPs na API...")
     with ThreadPoolExecutor(max_workers=workers) as executor:
         resultados_brutos = list(executor.map(consulta_fn, ceps))
     
     df_bruto = pd.DataFrame(resultados_brutos)
+    logger.info(f"[2/5] {len(df_bruto)} CEPs consultados com sucesso")
 
-    logger.info("Filtrando e transformando dados...")
+    logger.info("[3/5] Filtrando e transformando dados...")
     df_sucesso = df_bruto[df_bruto['status'] == 'sucesso'].copy()
     df_erro = df_bruto[df_bruto['status'] == 'erro'].copy()
+    logger.info(f"[3/5] Sucesso: {len(df_sucesso)} | Erros: {len(df_erro)}")
 
     if not df_sucesso.empty:
+        logger.info("[4/5] Normalizando e validando dados...")
         df_final = normalizar_resultados(df_sucesso)
         df_final = validar_dados_transformados(df_final)
 
-        logger.info("Salvando dados no banco e exportando arquivos...")
+        # O padrão é True para garantir que o banco seja recriado a cada execução
+        # isso foi feito com o objetivo de garantir que todas as funcionalidades
+        # do módulo de banco de dados sejam testadas (criação e inserção).
+        criar_banco(reset=True)
+
+        logger.info("[5/5] Salvando em banco de dados e exportando arquivos...")
         inserir_dados(df_final)
         exportar_json(df_final)
         exportar_xml(df_final)
 
     if not df_erro.empty:
-        logger.info(f"Gerando logs para {len(df_erro)} erro(s)...")
+        logger.info(f"Gerando CSV de erros com {len(df_erro)} registro(s)...")
+        caminho_csv = "data/output/enderecos_erros.csv"
         df_erros_formatados = preparar_csv_erros(df_erro)
-        df_erros_formatados.to_csv("data/output/enderecos_erros.csv", index=False)
+        df_erros_formatados.to_csv(caminho_csv, index=False)
 
     logger.info("Pipeline finalizado com sucesso!")
