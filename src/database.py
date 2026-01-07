@@ -1,6 +1,8 @@
-import sqlite3
-import pandas as pd
 import os
+import sqlite3
+
+import pandas as pd
+
 from src.utils import garantir_diretorio
 
 def criar_banco(

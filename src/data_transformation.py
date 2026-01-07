@@ -1,5 +1,6 @@
-import pandas as pd
 import warnings
+
+import pandas as pd
 
 
 def _validar_ceps_duplicados(

@@ -1,6 +1,7 @@
-import pandas as pd
 import os
 import warnings
+
+import pandas as pd
 
 def carregar_lista_cep(
     caminho_arquivo: str = 'data/input/cep.tsv.zip',

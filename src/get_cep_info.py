@@ -1,8 +1,9 @@
+import time
+from typing import Optional
+
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-import time
-from typing import Optional
 
 def _criar_sessao() -> requests.Session:
     """Cria uma sessão HTTP com política de Retry automática.

@@ -1,6 +1,8 @@
-import pandas as pd
 import os
 from datetime import datetime
+
+import pandas as pd
+
 from src.utils import garantir_diretorio
 
 
