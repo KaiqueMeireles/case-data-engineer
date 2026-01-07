@@ -1,3 +1,21 @@
+# Ambiente e Python
 __pycache__/
 .env
 .venv
+.vscode
+
+# Arquivo do banco de dados
+*.db
+
+# Arquivos de saída
+*.csv
+*.json
+*.xml
+
+# Pastas de dados
+data/input/*
+data/output/*
+
+# Arquivo de input e referência
+!data/input/cep.tsv.zip
+!data/input/dataset_origin.txt
