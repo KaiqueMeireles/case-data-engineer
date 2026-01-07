@@ -127,6 +127,6 @@ def executar_pipeline(
     if not df_erro.empty:
         logger.info(f"Gerando logs para {len(df_erro)} erro(s)...")
         df_erros_formatados = preparar_csv_erros(df_erro)
-        df_erros_formatados.to_csv("data/output/cep_erro.csv", index=False)
+        df_erros_formatados.to_csv("data/output/enderecos_erros.csv", index=False)
 
     logger.info("Pipeline finalizado com sucesso!")
