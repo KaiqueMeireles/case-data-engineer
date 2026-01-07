@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pandas as pd
+from tqdm import tqdm
 
 from src.data_transformation import (
     normalizar_resultados,
@@ -13,7 +14,7 @@ from src.database import criar_banco, inserir_dados
 from src.export_data import (
     exportar_json,
     exportar_xml,
-    limpar_arquivo,
+    limpar_arquivos_saida,
     preparar_csv_erros,
 )
 from src.get_cep_info import consultar_cep
@@ -84,10 +85,15 @@ def executar_pipeline(
 
     workers = 500 if is_local else 3
 
+    # Limpa/cria a pasta de saída e o banco de dados.
+    # O padrão é apagar tudo para garantir que o banco
+    # e os arquivos sejam recriados a cada execução.
+    # Isso foi feito com o objetivo de garantir que todas 
+    # as funcionalidades do módulo de banco de dados e 
+    # de export de arquivos sejam testadas (criação e inserção).
     garantir_diretorio("data/output/")
-    
-    # Limpa arquivos de saída anteriores
-    limpar_arquivo("data/output/enderecos_erros.csv")
+    limpar_arquivos_saida("data/output/")
+    criar_banco(reset=True)
 
     modo = 'LOCAL' if is_local else 'API'
     logger.info(
@@ -110,8 +116,18 @@ def executar_pipeline(
 
     # Execução paralela das consultas
     logger.info(f"[1/5] Consultando {len(ceps)} CEPs na API...")
+    
+    resultados_brutos = []
     with ThreadPoolExecutor(max_workers=workers) as executor:
-        resultados_brutos = list(executor.map(consulta_fn, ceps))
+
+        list_tqdm = tqdm(
+            executor.map(consulta_fn, ceps),
+            total=len(ceps),
+            unit="cep",
+            desc="Progresso",
+            ncols=100  # Largura fixa para não quebrar a linha no terminal
+        )
+        resultados_brutos = list(list_tqdm)
     
     df_bruto = pd.DataFrame(resultados_brutos)
     logger.info(f"[2/5] {len(df_bruto)} CEPs consultados com sucesso")
@@ -125,11 +141,6 @@ def executar_pipeline(
         logger.info("[4/5] Normalizando e validando dados...")
         df_final = normalizar_resultados(df_sucesso)
         df_final = validar_dados_transformados(df_final)
-
-        # O padrão é True para garantir que o banco seja recriado a cada execução
-        # isso foi feito com o objetivo de garantir que todas as funcionalidades
-        # do módulo de banco de dados sejam testadas (criação e inserção).
-        criar_banco(reset=True)
 
         logger.info("[5/5] Salvando em banco de dados e exportando arquivos...")
         inserir_dados(df_final)
