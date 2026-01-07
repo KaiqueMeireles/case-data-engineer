@@ -23,6 +23,18 @@ def limpar_arquivo(caminho_arquivo: str) -> None:
             logger.warning(f"Não foi possível remover {caminho_arquivo}: {e}")
 
 
+def limpar_arquivos_saida(output_folder: str = "data/output/") -> None:
+    """Remove todos os arquivos de saída anteriores (JSON, XML, CSV de erros).
+    
+    Args:
+        output_folder (str): Caminho da pasta de saída. Padrão: "data/output/".
+    """
+    logger.info("Limpando arquivos de saída anteriores...")
+    limpar_arquivo(os.path.join(output_folder, "enderecos.json"))
+    limpar_arquivo(os.path.join(output_folder, "enderecos.xml"))
+    limpar_arquivo(os.path.join(output_folder, "enderecos_erros.csv"))
+
+
 def preparar_csv_erros(
     df_erro: pd.DataFrame,
 ) -> pd.DataFrame:
@@ -98,9 +110,6 @@ def exportar_json(
     caminho_json = os.path.join(output_folder, "enderecos.json")
     
     logger.info("Exportando dados para JSON...")
-    
-    # Limpa arquivo JSON anterior
-    limpar_arquivo(caminho_json)
 
     try:
         df.to_json(
@@ -137,8 +146,6 @@ def exportar_xml(
     caminho_xml = os.path.join(output_folder, "enderecos.xml")
     
     logger.info("Exportando dados para XML...")
-    
-    limpar_arquivo(caminho_xml)
 
     try:
         df.to_xml(
