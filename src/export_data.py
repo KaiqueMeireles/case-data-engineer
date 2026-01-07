@@ -1,9 +1,12 @@
+import logging
 import os
 from datetime import datetime
 
 import pandas as pd
 
 from src.utils import garantir_diretorio
+
+logger = logging.getLogger(__name__)
 
 
 def preparar_csv_erros(
@@ -74,7 +77,7 @@ def exportar_json(
         Exception: Se houver erro na exportação.
     """
     if df.empty:
-        print("[JSON] DataFrame vazio. Nada será exportado.")
+        logger.info("DataFrame vazio. Nada será exportado para JSON.")
         return
 
     garantir_diretorio(output_folder)
@@ -87,9 +90,9 @@ def exportar_json(
             indent=4,
             force_ascii=False
         )
-        print(f"[JSON] Sucesso: {len(df)} registro(s) exportado(s).")
+        logger.info(f"JSON: {len(df)} registro(s) exportado(s).")
     except Exception as e:
-        print(f"[JSON] Erro ao exportar: {e}")
+        logger.error(f"Erro ao exportar JSON: {e}")
         raise
 
 
@@ -108,7 +111,7 @@ def exportar_xml(
         Exception: Se houver erro na exportação ou biblioteca ausente.
     """
     if df.empty:
-        print("[XML] DataFrame vazio. Nada será exportado.")
+        logger.info("DataFrame vazio. Nada será exportado para XML.")
         return
 
     garantir_diretorio(output_folder)
@@ -122,13 +125,13 @@ def exportar_xml(
             row_name='endereco',
             parser='lxml'
         )
-        print(f"[XML] Sucesso: {len(df)} registro(s) exportado(s).")
+        logger.info(f"XML: {len(df)} registro(s) exportado(s).")
     except ImportError:
-        print(
-            "[XML] Erro: biblioteca 'lxml' não instalada. "
+        logger.error(
+            "Erro: biblioteca 'lxml' não instalada. "
             "Execute: pip install lxml"
         )
         raise
     except Exception as e:
-        print(f"[XML] Erro ao exportar: {e}")
+        logger.error(f"Erro ao exportar XML: {e}")
         raise

@@ -1,7 +1,10 @@
+import logging
 import os
-import warnings
 
 import pandas as pd
+
+logger = logging.getLogger(__name__)
+
 
 def carregar_lista_cep(
     caminho_arquivo: str = 'data/input/cep.tsv.zip',
@@ -33,30 +36,34 @@ def carregar_lista_cep(
     """
     if not os.path.exists(caminho_arquivo):
         raise FileNotFoundError(f"Arquivo não encontrado: {caminho_arquivo}")
-    
+
     try:
         # O arquivo é um TSV (table separated values), por isso o separador é '\t'.
         # Puxei apenas a coluna 'cep' para economizar memória.
         # Mantive o tipo str para evitar problemas com zeros à esquerda.
-        cep_df = pd.read_csv(caminho_arquivo, sep='\t', usecols=['cep'], dtype=str)
-        
+        cep_df = pd.read_csv(
+            caminho_arquivo,
+            sep='\t',
+            usecols=['cep'],
+            dtype=str,
+        )
+
         if len(cep_df) < tamanho_amostra:
-            warn_message = (
+            logger.warning(
                 f"Amostra solicitada ({tamanho_amostra}) "
                 f"maior que dados disponíveis ({len(cep_df)}). "
                 "Retornando todos os dados."
             )
-            warnings.warn(warn_message, UserWarning)
             return cep_df.reset_index(drop=True)
-        
+
         # Limitando os resultados à amostra desejada (10.000 casos).
-        # O random_state garante que a amostra seja a mesma em execuções diferentes.
-        # A escolha do 25 por padrão foi por causa da soma dos dígitos do ano de 
-        # fundação do banco (1 + 9 + 6 + 9 = 25).
+        # O random_state garante que a amostra seja a mesma em execuções
+        # diferentes. A escolha do 25 por padrão foi por causa da soma dos
+        # dígitos do ano de fundação do banco (1 + 9 + 6 + 9 = 25).
         return cep_df.sample(
             n=tamanho_amostra,
-            random_state=semente
+            random_state=semente,
         ).reset_index(drop=True)
-    
+
     except Exception as e:
         raise RuntimeError(f"Erro ao carregar CEPs: {e}")

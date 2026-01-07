@@ -1,3 +1,4 @@
+import logging
 import os
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -9,13 +10,22 @@ from src.data_transformation import (
     validar_dados_transformados,
 )
 from src.database import criar_banco, inserir_dados
-from src.export_data import exportar_json, exportar_xml, preparar_csv_erros
+from src.export_data import (
+    exportar_json,
+    exportar_xml,
+    preparar_csv_erros,
+)
 from src.get_cep_info import consultar_cep
 from src.get_cep_list import carregar_lista_cep
 from src.utils import garantir_diretorio
 
+logger = logging.getLogger(__name__)
 
-def _validar_entrada(tamanho_amostra: int, caminho_arquivo: str) -> None:
+
+def _validar_entrada(
+    tamanho_amostra: int,
+    caminho_arquivo: str,
+) -> None:
     """Valida os parâmetros de entrada do pipeline ETL.
 
     Verifica se tamanho_amostra é válido e se o arquivo de entrada existe.
@@ -28,7 +38,6 @@ def _validar_entrada(tamanho_amostra: int, caminho_arquivo: str) -> None:
         ValueError: Se tamanho_amostra <= 0 ou > 1000000.
         FileNotFoundError: Se arquivo não existe.
     """
-    # Valida tamanho_amostra
     if tamanho_amostra <= 0:
         raise ValueError(
             f"tamanho_amostra deve ser > 0, recebido: {tamanho_amostra}"
@@ -40,7 +49,6 @@ def _validar_entrada(tamanho_amostra: int, caminho_arquivo: str) -> None:
             f"recebido: {tamanho_amostra}"
         )
 
-    # Valida arquivo de entrada
     caminho_normalizado = str(Path(caminho_arquivo))
     if not os.path.exists(caminho_normalizado):
         raise FileNotFoundError(
@@ -78,9 +86,9 @@ def executar_pipeline(
     # do módulo de banco de dados sejam testadas (criação e inserção).
     criar_banco(reset=True)
 
-    print(
-        f"[ETL] Modo {'LOCAL' if is_local else 'API'}. "
-        f"Carregando lista com {workers} worker(s)..."
+    modo = 'LOCAL' if is_local else 'API'
+    logger.info(
+        f"Modo {modo}. Carregando lista com {workers} worker(s)..."
     )
     df_lista = carregar_lista_cep(
         caminho_arquivo=caminho_arquivo,
@@ -88,7 +96,7 @@ def executar_pipeline(
     )
     ceps = df_lista['cep'].tolist()
 
-    print(f"[ETL] Iniciando consultas para {len(ceps)} CEPs...")
+    logger.info(f"Iniciando consultas para {len(ceps)} CEPs...")
 
     # Seleciona função de consulta (API real ou mock).
     if is_local:
@@ -103,7 +111,7 @@ def executar_pipeline(
     
     df_bruto = pd.DataFrame(resultados_brutos)
 
-    print("[ETL] Filtrando e transformando dados...")
+    logger.info("Filtrando e transformando dados...")
     df_sucesso = df_bruto[df_bruto['status'] == 'sucesso'].copy()
     df_erro = df_bruto[df_bruto['status'] == 'erro'].copy()
 
@@ -111,14 +119,14 @@ def executar_pipeline(
         df_final = normalizar_resultados(df_sucesso)
         df_final = validar_dados_transformados(df_final)
 
-        print("[ETL] Salvando dados no banco e exportando arquivos...")
+        logger.info("Salvando dados no banco e exportando arquivos...")
         inserir_dados(df_final)
         exportar_json(df_final)
         exportar_xml(df_final)
 
     if not df_erro.empty:
-        print(f"[ETL] Gerando logs para {len(df_erro)} erro(s)...")
+        logger.info(f"Gerando logs para {len(df_erro)} erro(s)...")
         df_erros_formatados = preparar_csv_erros(df_erro)
         df_erros_formatados.to_csv("data/output/cep_erro.csv", index=False)
 
-    print("[ETL] Pipeline finalizado com sucesso!")
+    logger.info("Pipeline finalizado com sucesso!")

@@ -1,9 +1,13 @@
+import logging
 import os
 import sqlite3
 
 import pandas as pd
 
 from src.utils import garantir_diretorio
+
+logger = logging.getLogger(__name__)
+
 
 def criar_banco(
     output_folder: str = "data/output/",
@@ -36,7 +40,7 @@ def criar_banco(
             # Recria o banco se solicitado
             if reset:
                 cursor.execute("DROP TABLE IF EXISTS enderecos;")
-                print("[SQL] Tabela 'enderecos' removida (reset).")
+                logger.info("Tabela 'enderecos' removida (reset).")
 
             cursor.execute(
                 """
@@ -62,11 +66,11 @@ def criar_banco(
 
             conn.commit()
 
-        print(f"[SQL] Banco criado/validado: {caminho_db}")
+        logger.info(f"Banco criado/validado: {caminho_db}")
         return caminho_db
 
     except Exception as e:
-        print(f"[SQL] Erro ao criar banco: {e}")
+        logger.error(f"Erro ao criar banco: {e}")
         raise
 
 
@@ -109,8 +113,8 @@ def inserir_dados(
 
             # Alerta sobre CEPs duplicados e insere os novos.
             if num_duplicados > 0:
-                print(
-                    f"[SQL] Aviso: {num_duplicados} CEP(s) já existem "
+                logger.warning(
+                    f"Aviso: {num_duplicados} CEP(s) já existem "
                     f"no banco. Serão ignorados."
                 )
                 
@@ -124,14 +128,14 @@ def inserir_dados(
 
                 conn.commit()
 
-                print(
-                    f"[SQL] Sucesso: {len(df_novos)} endereço(s) "
+                logger.info(
+                    f"Sucesso: {len(df_novos)} endereço(s) "
                     "inserido(s) no banco."
                 )
                 
             else:
-                print("[SQL] Nenhum CEP novo para inserir.")
+                logger.info("Nenhum CEP novo para inserir.")
 
     except Exception as e:
-        print(f"[SQL] Erro ao inserir dados: {e}")
+        logger.error(f"Erro ao inserir dados: {e}")
         raise
