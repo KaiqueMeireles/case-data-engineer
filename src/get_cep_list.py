@@ -45,7 +45,7 @@ def carregar_lista_cep(
             caminho_arquivo,
             sep='\t',
             usecols=['cep'],
-            dtype=str,
+            dtype={'cep': str},
         )
 
         if len(cep_df) < tamanho_amostra:

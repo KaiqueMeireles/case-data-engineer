@@ -3,7 +3,7 @@
 Pipeline de ETL (Extraction, Transformation and Load) robusto e resiliente para processamento de dados de endereços brasileiros. O sistema consome uma lista local de CEPs, consulta a API ViaCEP de forma paralela com controle inteligente de rate limiting thread-safe, aplica validações rigorosas de qualidade e consistência, e guarda/exporta os resultados em múltiplos formatos (SQLite, JSON, XML e CSV).
 ## Destaques
 
-- **Rate Limiting Thread-Safe:** `Lock` + janela deslizante garantem máximo de 50 req/min mesmo com 3 threads paralelas
+- **Rate Limiting Thread-Safe:** `Lock` + intervalo mínimo de 1.05s garantem máximo de 57 req/min mesmo com 3 threads paralelas
 - **Processamento Paralelo:** `ThreadPoolExecutor` reduz tempo de execução em ~3x (166min → 55min para 10k CEPs)
 - **Resiliência:** retry automático com backoff exponencial + timeout configurável
 - **Logging Dual:** console limpo (ERROR+) para execução, arquivo completo (DEBUG+) para análise
@@ -42,7 +42,7 @@ Edite `main.py` para ajustar:
 
 ```python
 tamanho_amostra = 10_000  # CEPs a processar (use 10-100 para testes rápidos, mas o padrão é 10.000)
-caminho_arquivo = 'data/input/dataset_origin.txt'  # Arquivo de entrada com a lista de CEPs
+caminho_arquivo = 'data/input/cep.tsv.zip'  # Arquivo de entrada com a lista de CEPs
 is_local = False      # False: API real (ViaCEP) | True: mock para testes offline
 ```
 
@@ -110,7 +110,7 @@ Arquivos criados em `data/output/`:
 case-data-engineer/
 ├── data/
 │   ├── input/
-│   │   ├── dataset_origin.txt     # Dataset de CEPs (texto)
+│   │   ├── dataset_origin.txt     # Link do dataset no Kaggle
 │   │   └── cep.tsv.zip            # Dataset compactado (Kaggle)
 │   └── output/                     # Gerado automaticamente
 │       ├── base_enderecos.db
@@ -164,15 +164,16 @@ Com 3 workers (modo API):
 - Funções privadas (`_funcao`) protegem lógica interna.
 - Módulos especializados com responsabilidades claras.
 
-### Rate Limiting Thread-Safe com Janela Deslizante
-- **Problema:** Com 3 workers paralelos, simples delays causavam race conditions e violações do limite de 50 req/min.
-- **Solução:** Implementação de `Lock` + janela deslizante de 60 segundos que rastreia todas as requisições.
+### Rate Limiting Thread-Safe com Intervalo Mínimo
+- **Problema:** Com 3 workers paralelos, simples delays causavam race conditions e violações do limite da API.
+- **Solução:** Implementação de `Lock` + controle de intervalo mínimo entre requisições.
 - **Funcionamento:** 
   - Cada thread deve adquirir o lock antes de fazer uma requisição.
-  - Sistema verifica quantas requisições foram feitas nos últimos 60 segundos.
-  - Se atingiu o limite (50), calcula quanto tempo esperar para a requisição mais antiga sair da janela.
-  - Distribui requisições uniformemente (~1.2s entre cada).
-- **Resultado:** Garantia absoluta de não ultrapassar 50 req/min, mesmo com processamento paralelo.
+  - Sistema verifica o tempo decorrido desde a última requisição.
+  - Se o intervalo for menor que 1.05s, a thread aguarda o tempo restante.
+  - Registra o timestamp da requisição e libera o lock.
+  - Distribui requisições uniformemente (~1.05s entre cada).
+- **Resultado:** Garantia de não ultrapassar ~57 req/min, mesmo com processamento paralelo.
 
 
 ### Limpeza Automática de Arquivos e Banco de Dados
@@ -197,7 +198,7 @@ Com 3 workers (modo API):
   - `main.py` → ponto de entrada da aplicação.
   - `etl.py` → orquestração do pipeline.
   - `get_cep_info.py` → comunicação com API.
-  - `rate_limit.py` → controle de rate limiting thread-safe com Lock e janela deslizante.
+  - `rate_limit.py` → controle de rate limiting thread-safe com Lock e intervalo mínimo.
   - `get_cep_list.py` → carregamento dos dados iniciais.
   - `data_transformation.py` → transformação e validação de dados.
   - `database.py` → criação, inserção e configuração do banco de dados.
@@ -220,11 +221,11 @@ Com 3 workers (modo API):
 
 - **Modo local (mock):** 500 workers → testes muito rápidos (10.000 CEPs em ~1-2 minutos).
 - **Modo API com rate limiting thread-safe:** 3 workers + controle rigoroso com Lock.
-  - Sistema garante máximo de 50 requisições por minuto.
-  - Distribui requisições uniformemente (~1.2s entre cada).
-  - Estimativa para 10.000 CEPs: ~3-4 horas.
-- **Retry policy:** backoff exponencial (total=2, backoff_factor=0.5) para lidar com instabilidades.
-- **Timeout:** 5 segundos por requisição para evitar travamentos.
+  - Sistema garante máximo de ~57 requisições por minuto.
+  - Distribui requisições uniformemente (~1.05s entre cada).
+  - Estimativa para 10.000 CEPs: ~3 horas.
+- **Retry policy:** backoff exponencial (total=3, backoff_factor=1) para lidar com instabilidades.
+- **Timeout:** 10 segundos por requisição para evitar travamentos.
 - **Pool de conexões:** `HTTPAdapter` reutiliza conexões HTTP para reduzir overhead.
 
 
