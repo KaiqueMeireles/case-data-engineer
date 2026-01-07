@@ -9,6 +9,20 @@ from src.utils import garantir_diretorio
 logger = logging.getLogger(__name__)
 
 
+def limpar_arquivo(caminho_arquivo: str) -> None:
+    """Remove um arquivo individual se existir.
+    
+    Args:
+        caminho_arquivo (str): Caminho completo do arquivo a remover.
+    """
+    if os.path.exists(caminho_arquivo):
+        try:
+            os.remove(caminho_arquivo)
+            logger.info(f"Arquivo anterior removido: {caminho_arquivo}")
+        except OSError as e:
+            logger.warning(f"Não foi possível remover {caminho_arquivo}: {e}")
+
+
 def preparar_csv_erros(
     df_erro: pd.DataFrame,
 ) -> pd.DataFrame:
@@ -82,6 +96,11 @@ def exportar_json(
 
     garantir_diretorio(output_folder)
     caminho_json = os.path.join(output_folder, "enderecos.json")
+    
+    logger.info("Exportando dados para JSON...")
+    
+    # Limpa arquivo JSON anterior
+    limpar_arquivo(caminho_json)
 
     try:
         df.to_json(
@@ -116,6 +135,10 @@ def exportar_xml(
 
     garantir_diretorio(output_folder)
     caminho_xml = os.path.join(output_folder, "enderecos.xml")
+    
+    logger.info("Exportando dados para XML...")
+    
+    limpar_arquivo(caminho_xml)
 
     try:
         df.to_xml(

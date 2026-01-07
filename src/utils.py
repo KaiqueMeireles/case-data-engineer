@@ -75,3 +75,8 @@ def configurar_logging() -> None:
     console_handler.setLevel(logging.WARNING)
     console_handler.setFormatter(formato_console)
     logger.addHandler(console_handler)
+
+    # Silencia logs verbose das bibliotecas externas
+    # urllib3 gera muitas mensagens de retry que poluem o console
+    logging.getLogger('urllib3').setLevel(logging.CRITICAL)
+    logging.getLogger('requests').setLevel(logging.WARNING)
