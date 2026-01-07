@@ -77,7 +77,7 @@ def executar_pipeline(
     """
     _validar_entrada(tamanho_amostra, caminho_arquivo)
 
-    workers = 500 if is_local else 4
+    workers = 500 if is_local else 3
 
     garantir_diretorio("data/output/")
 
