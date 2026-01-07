@@ -74,8 +74,8 @@ def executar_pipeline(
         caminho_arquivo (str): Caminho do arquivo com lista de CEPs.
             Padrão: 'data/input/cep.tsv.zip'.
         is_local (bool): Se True, usa mock ao invés de API real.
-            Define workers automaticamente: 500 em modo local, 4 em produção.
-            Padrão: False (usa API ViaCEP com 4 workers).
+            Define workers automaticamente: 500 em modo local, 3 em produção.
+            Padrão: False (usa API ViaCEP com 3 workers).
     """
     _validar_entrada(tamanho_amostra, caminho_arquivo)
 
@@ -151,6 +151,6 @@ def executar_pipeline(
         logger.info(f"Gerando CSV de erros com {len(df_erro)} registro(s)...")
         caminho_csv = "data/output/enderecos_erros.csv"
         df_erros_formatados = preparar_csv_erros(df_erro)
-        df_erros_formatados.to_csv(caminho_csv, index=False)
+        df_erros_formatados.to_csv(caminho_csv, index=False, encoding='utf-8')
 
     logger.info("Pipeline finalizado com sucesso!")

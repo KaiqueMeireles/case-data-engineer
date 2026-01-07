@@ -65,7 +65,7 @@ def configurar_logging() -> None:
 
     # Handler para geração de ARQUIVO (todos os níveis de logs)
     garantir_diretorio("data/output/")
-    arquivo_handler = logging.FileHandler(caminho_log)
+    arquivo_handler = logging.FileHandler(caminho_log, encoding='utf-8')
     arquivo_handler.setLevel(logging.DEBUG)
     arquivo_handler.setFormatter(formato_arquivo)
     logger.addHandler(arquivo_handler)
