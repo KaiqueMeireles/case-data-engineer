@@ -1,0 +1,1 @@
+https://www.kaggle.com/datasets/diegomariano/cep-brasil?select=cep.tsv
