@@ -85,9 +85,8 @@ def consultar_cep(cep: str) -> dict:
             - 'dados': Dados do endereço (dict) ou None se erro
             - 'mensagem': Mensagem de erro ou string vazia se sucesso
     """
-    # Com 3 workers paralelos, isso resulta em ~2-3 req/s
     # Jitter evita padrões previsíveis que parecem bot
-    delay = random.uniform(1.0, 1.5)
+    delay = random.uniform(0.5, 1.0)
     time.sleep(delay)
 
     resultado = {
