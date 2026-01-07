@@ -1,4 +1,5 @@
 import logging
+import random
 import time
 from typing import Optional
 
@@ -7,6 +8,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 logger = logging.getLogger(__name__)
+
 
 def _criar_sessao() -> requests.Session:
     """Cria uma sessão HTTP com política de Retry automática.
@@ -19,10 +21,18 @@ def _criar_sessao() -> requests.Session:
     """
     session = requests.Session()
 
+    # User-Agent para não parecer um bot.
+    session.headers.update({
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/120.0.0.0 Safari/537.36"
+        )
+    })
+
     retry_strategy = Retry(
-        total=5,  # Tenta no máximo 5 vezes extras.
-        backoff_factor=2,  # Espera: 2s, 4s, 8s, 16s até 32s.
-        # Códigos de status para retry.
+        total=5,
+        backoff_factor=2,
         status_forcelist=[429, 500, 502, 503, 504],
         allowed_methods=["GET"],
     )
@@ -62,8 +72,8 @@ def consultar_cep(cep: str) -> dict:
     """Consulta informações de endereço para um CEP via API ViaCEP.
 
     Realiza uma requisição GET à API ViaCEP com tratamento de erros de
-    conexão, timeout e CEPs inválidos. Inclui delay para respeitar rate
-    limiting.
+    conexão, timeout e CEPs inválidos. Implementa delay com jitter para
+    respeitar rate limiting e evitar bloqueios.
 
     Args:
         cep (str): Código de Endereçamento Postal (CEP) a ser consultado.
@@ -75,23 +85,22 @@ def consultar_cep(cep: str) -> dict:
             - 'dados': Dados do endereço (dict) ou None se erro
             - 'mensagem': Mensagem de erro ou string vazia se sucesso
     """
-    # Delay para respeitar rate limiting da API.
-    # Apesar do Retry, adicionei um delay fixo para evitar
-    # sobrecarregar a API com muitas requisições em sequência.
-    time.sleep(0.2)
+    # Com 3 workers paralelos, isso resulta em ~2-3 req/s
+    # Jitter evita padrões previsíveis que parecem bot
+    delay = random.uniform(1.0, 1.5)
+    time.sleep(delay)
 
     resultado = {
         "cep": cep,
-        "status": "erro",  # Assume erro até provar o contrário.
+        "status": "erro",
         "dados": None,
         "mensagem": "",
     }
 
-    # Valida o CEP antes de fazer a requisição.
     cep_valido = _validar_input_cep(cep)
 
     if cep_valido is None:
-        resultado['mensagem'] = (
+        resultado["mensagem"] = (
             "Formato inválido: CEP deve conter exatamente "
             "8 dígitos numéricos."
         )
@@ -107,20 +116,18 @@ def consultar_cep(cep: str) -> dict:
             dic_retorno = response.json()
 
             if dic_retorno.get("erro"):
-                resultado['mensagem'] = "CEP inválido ou inexistente."
-
+                resultado["mensagem"] = "CEP inválido ou inexistente."
             else:
-                resultado['status'] = "sucesso"
-                resultado['dados'] = dic_retorno
-
+                resultado["status"] = "sucesso"
+                resultado["dados"] = dic_retorno
         else:
-            resultado['mensagem'] = f"Erro HTTP {response.status_code}"
+            resultado["mensagem"] = f"Erro HTTP {response.status_code}"
 
     except Exception as e:
-        resultado['mensagem'] = f"Erro de conexão: {str(e)}"
+        resultado["mensagem"] = f"Erro de conexão: {str(e)}"
 
     return resultado
 
-# Instanciando a sessão fora da função para que todos os
-# workers usem essa mesma configuração.
+
+# Sessão global reutilizável com retry automático
 session = _criar_sessao()
