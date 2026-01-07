@@ -17,6 +17,24 @@ def garantir_diretorio(caminho: str) -> None:
         logger.info(f"Diretório preparado: {caminho}")
 
 
+def _limpar_log_anterior(caminho_log: str) -> None:
+    """Remove o arquivo de log anterior para iniciar uma nova sessão limpa.
+
+    Verifica se o arquivo de log existe e o remove, evitando logs
+    acumulados de execuções anteriores.
+
+    Args:
+        caminho_log (str): Caminho completo do arquivo de log a limpar.
+    """
+    logger = logging.getLogger(__name__)
+    if os.path.exists(caminho_log):
+        try:
+            os.remove(caminho_log)
+            logger.info(f"Log anterior removido: {caminho_log}")
+        except OSError as e:
+            logger.warning(f"Não foi possível remover log anterior: {e}")
+
+
 def configurar_logging() -> None:
     """Centraliza a configuração de log do sistema.
 
@@ -31,6 +49,9 @@ def configurar_logging() -> None:
     for handler in logger.handlers[:]:
         logger.removeHandler(handler)
 
+    caminho_log = "data/output/pipeline_diagnosis.log"
+    _limpar_log_anterior(caminho_log)
+
     # Formato detalhado para arquivo
     formato_arquivo = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -44,7 +65,7 @@ def configurar_logging() -> None:
 
     # Handler para geração de ARQUIVO (todos os níveis de logs)
     garantir_diretorio("data/output/")
-    arquivo_handler = logging.FileHandler("data/output/pipeline_diagnosis.log")
+    arquivo_handler = logging.FileHandler(caminho_log)
     arquivo_handler.setLevel(logging.DEBUG)
     arquivo_handler.setFormatter(formato_arquivo)
     logger.addHandler(arquivo_handler)
